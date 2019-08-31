@@ -3,7 +3,6 @@ module IOUtils
 	using CSV
 	using DataFrames
 	using Dates
-	using JSON
 	using LightGraphs
 	using LinearAlgebra
 	using Random

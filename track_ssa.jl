@@ -110,7 +110,7 @@ original and reconstructed time series are compared and saved to a .csv file.
 function track_ssa(n, wLen, monitor_freq, ϵ, use_bk, random_guess, max_dim,
 				   filepath; avg_each=false, sample_epochs=[], skip_last=3)
 	tData, _ = IOUtils.readPower(filepath, period=30, step=20)
-	nHi = 5; γ = 1.1; sIdx = 1; epochCnt = 0
+	nHi = 5; γ = 0.1; sIdx = 1; epochCnt = 0
 	eval_meth = use_bk ? :block_krylov : :subspace_iteration
 	# create matrix and corresponding linear operator
 	A = IOUtils.getLaggedCovMatrix(tData, n, sIdx, wLen); Anew = nothing
@@ -166,7 +166,7 @@ function track_ssa(n, wLen, monitor_freq, ϵ, use_bk, random_guess, max_dim,
 			Hrec = lowRankReconstruct(Anew, V0, D[1:sSize], avg_each=avg_each)
 			TSrec = extractTS(Hrec)  # extract reconstructed time series
 			TSorg = extractTS(Anew)  # extract original time series
-			CSV.write("$(dataset)_$(epochCnt).csv",
+			CSV.write("power_$(epochCnt).csv",
 					  DataFrame(k=1:length(TSorg), org=sqrt(n) .* TSorg,
 								rec=sqrt(n) .* TSrec))
 			# pop first elt
@@ -197,11 +197,11 @@ s = ArgParseSettings(description="""
 	"--n"
 		help = "Number of data points"
 		arg_type = Int
-		default = 90
+		default = 12096
 	"--window_len"
 		help = "Window length for SSA"
 		arg_type = Int
-		default = 30
+		default = 4032
 	"--max_dim"
 		help = "Maximum number of principal components"
 		arg_type = Int
@@ -209,19 +209,11 @@ s = ArgParseSettings(description="""
 	"--monitor_freq"
 		help = "The monitoring frequency"
 		arg_type = Int
-		default = 30
+		default = 6
 	"--seed"
 		help = "The random seed for the RNG"
 		arg_type = Int
 		default = 999
-	"--phi"
-		help = "φ parameter for subspace dimension estimation"
-		arg_type = Float64
-		default = .999
-	"--T"
-		help = "The time horizon for subspace dimension estimation"
-		arg_type = Int
-		default = 5
 	"--gamma"
 		help = "The eigenvalue decay parameter γ"
 		arg_type = Float64
@@ -230,14 +222,11 @@ s = ArgParseSettings(description="""
 		help = "The desired subspace distance to retain"
 		arg_type = Float64
 		default = 1e-3
-	"--dataset"
-		help = "Choose between weather and power dataset"
-		range_tester = (x -> lowercase(x) in ["power", "weather"])
 	"--random_guess"
 		help = "Set to report number of iterations predicted by random guess"
 		action = :store_true
 	"--use_bk"
-		help = "Use a block krylov method instead of randomized subspace iter."
+		help = "Use a block krylov method instead of subspace iter."
 		action = :store_true
 	"--avg_each"
 		help = "Set to average each component in time series reconstruction"
@@ -250,9 +239,9 @@ end
 parsed = parse_args(s); Random.seed!(parsed["seed"])
 monitor_freq = parsed["monitor_freq"]
 n, max_dim = parsed["n"], parsed["max_dim"]
-φ, T, γ, ϵ = parsed["phi"], parsed["T"], parsed["gamma"], parsed["eps"]
+φγ, ϵ = parsed["gamma"], parsed["eps"]
 use_bk, rnd_guess = parsed["use_bk"], parsed["random_guess"]
-wLen, dataset = parsed["window_len"], parsed["dataset"]
+wLen = parsed["window_len"]
 avg_each, sample_epochs = parsed["avg_each"], parsed["sample_epochs"]
 filepath = parsed["filepath"]
 
